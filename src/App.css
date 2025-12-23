@@ -1,17 +1,14 @@
-/* 1. 确保浏览器窗口和 React 根容器填满屏幕 */
 html, body, #root {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* 防止出现滚动条 */
+  width: 100%; height: 100%; margin: 0; padding: 0;
+  background-color: #000;
 }
 
-/* 2. 这里的选择器必须和 React 组件中的 class 或 id 一致 */
 .fullscreen-map {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100vw; height: 100vh;
+  /* 宇宙星空背景 */
+  background: radial-gradient(circle at center, #1b2735 0%, #000 100%);
+  background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
 }
+
+/* 隐藏右键菜单 */
+canvas { outline: none; }

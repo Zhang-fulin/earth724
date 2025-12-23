@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import maplibregl, { Map as MapLibreMap } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 const MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -7,36 +8,29 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
   sources: {
     'world-satellite': {
       type: 'raster',
-      tiles: [
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-      ],
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
       maxzoom: 18
     },
     'carto-labels': {
       type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png'
-      ],
-      tileSize: 256
+      tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
     }
   },
   layers: [
     {
       id: 'satellite-layer',
       type: 'raster',
-      source: 'world-satellite'
+      source: 'world-satellite',
+      paint: { 
+        'raster-fade-duration': 0,
+      }
     },
     {
       id: 'labels-layer',
       type: 'raster',
-      source: 'carto-labels',
-      paint: {
-        'raster-contrast': 0.2,
-        'raster-opacity': 0.9
-      }
+      source: 'carto-labels'
     }
   ]
 }
@@ -50,25 +44,37 @@ export default function Map() {
 
     mapRef.current = new maplibregl.Map({
       container: containerRef.current,
-      center: [31.13, 29.97],
-      zoom: 2,
-      attributionControl: false,
       style: MAP_STYLE,
-      dragRotate: false,        // 禁止鼠标右键旋转和左键+Ctrl旋转
+      zoom: 1, 
+      attributionControl: false,
+      
+      dragRotate: false,
       touchPitch: false,
+      pitchWithRotate: false,
+      
+      maxTileCacheSize: 10000,
     })
 
+
+    const preventDefault = (e: MouseEvent) => e.preventDefault()
+    containerRef.current.addEventListener('contextmenu', preventDefault)
+
+
+    mapRef.current.on('style.load', () => {
+      if (!mapRef.current) return;
+      mapRef.current.setSky({
+        'sky-color': '#91b7f0ff',
+        'sky-horizon-blend': 0.5,
+        'atmosphere-blend': 0.8,
+      });
+    });
+
     return () => {
+      containerRef.current?.removeEventListener('contextmenu', preventDefault)
       mapRef.current?.remove()
       mapRef.current = null
     }
   }, [])
 
-  return (
-    <div
-      ref={containerRef}
-      className="fullscreen-map" // 使用上面 CSS 中定义的类名
-      // style={{ background: '#000' }} // 兜底背景色
-    />
-  )
+  return <div ref={containerRef} className="fullscreen-map" />
 }
