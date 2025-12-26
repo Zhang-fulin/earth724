@@ -2,6 +2,23 @@ import { useEffect, useRef } from 'react'
 import maplibregl, { Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+const generateGraticule = () => {
+  const features = [];
+  for (let lng = -180; lng <= 180; lng += 15) {
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [[lng, -80], [lng, 80]] }
+    });
+  }
+  for (let lat = -75; lat <= 75; lat += 15) {
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [[-180, lat], [180, lat]] }
+    });
+  }
+  return { type: 'FeatureCollection', features };
+};
+
 const MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   projection: { type: 'globe' },
@@ -20,11 +37,18 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
   },
   layers: [
     {
+      id: 'background-fill',
+      type: 'background',
+      paint: {
+        'background-color': '#242424', 
+      }
+    },
+    {
       id: 'satellite-layer',
       type: 'raster',
       source: 'world-satellite',
       paint: { 
-        'raster-fade-duration': 0,
+        'raster-fade-duration': 800,
       }
     },
     {
@@ -47,26 +71,40 @@ export default function Map() {
       style: MAP_STYLE,
       zoom: 1, 
       attributionControl: false,
-      
       dragRotate: false,
       touchPitch: false,
       pitchWithRotate: false,
-      
-      maxTileCacheSize: 10000,
+      maxTileCacheSize: 1000,
     })
-
 
     const preventDefault = (e: MouseEvent) => e.preventDefault()
     containerRef.current.addEventListener('contextmenu', preventDefault)
 
-
     mapRef.current.on('style.load', () => {
       if (!mapRef.current) return;
-      mapRef.current.setSky({
-        'sky-color': '#91b7f0ff',
+      const map = mapRef.current;
+
+      map.setSky({
+        'sky-color': '#050505',
+        'horizon-color': '#242424',
         'sky-horizon-blend': 0.5,
-        'atmosphere-blend': 0.8,
       });
+
+      map.addSource('local-graticule', {
+        type: 'geojson',
+        data: generateGraticule() as any
+      });
+
+      map.addLayer({
+        id: 'graticule-line-layer',
+        type: 'line',
+        source: 'local-graticule',
+        paint: {
+          'line-color': '#7baaf0ff',
+          'line-width': 0.7,
+          'line-opacity': 0.5 
+        }
+      }, 'satellite-layer');
     });
 
     return () => {
