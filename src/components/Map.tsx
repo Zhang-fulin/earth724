@@ -123,13 +123,15 @@ export default function Map({ newsData }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
 
+  const offset = 0.001;
+
   const getGeoJSON = (data: NewsItem[]): GeoJSON.FeatureCollection => ({
     type: 'FeatureCollection',
     features: data.map(item => ({
       type: 'Feature',
-      geometry: { 
+      geometry: {
         type: 'Point', 
-        coordinates: [item.longitude, item.latitude]
+        coordinates: [item.longitude + (Math.random() - 0.5) * offset, item.latitude + (Math.random() - 0.5) * offset]
       },
       properties: { 
         title: item.rich_text,
