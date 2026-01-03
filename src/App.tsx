@@ -2,10 +2,10 @@
 // import reactLogo from './assets/react.svg'
 // import viteLogo from '/vite.svg'
 import './App.css'
-import Map from './components/Map'
+import NewsManager from './components/NewsManager'
 
 function App() {
-  return <Map />
+  return <NewsManager />
   // const [count, setCount] = useState(0)
 
   // return (

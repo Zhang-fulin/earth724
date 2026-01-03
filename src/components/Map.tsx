@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import maplibregl, { Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { type NewsItem } from './NewsManager'
 
 const generateGraticule = () => {
   const features = [];
@@ -59,12 +60,18 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
   ]
 }
 
-export default function Map() {
+interface MapProps {
+  newsData: NewsItem[]
+}
+
+export default function Map({ newsData }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
+
+    // console.log(newsData)
 
     mapRef.current = new maplibregl.Map({
       container: containerRef.current,
