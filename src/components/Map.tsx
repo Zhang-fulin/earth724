@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import maplibregl, { Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { type NewsItem } from './NewsManager'
+import './MapPopup.css'
 
 const generateGraticule = () => {
   const features = [];
@@ -20,6 +21,58 @@ const generateGraticule = () => {
   return { type: 'FeatureCollection', features };
 };
 
+const createPulsingDot = (map: MapLibreMap, size: number = 100) => {
+  const dot: maplibregl.StyleImageInterface = {
+    width: size,
+    height: size,
+    data: new Uint8Array(size * size * 4) as any,
+    onAdd() {
+      const canvas = document.createElement('canvas');
+      canvas.width = this.width;
+      canvas.height = this.height;
+      (this as any).context = canvas.getContext('2d', { willReadFrequently: true });
+    },
+
+    render() {
+      const duration = 2000;
+      const t = (performance.now() % duration) / duration;
+      const radius = 10;
+      const context = (this as any).context as CanvasRenderingContext2D;
+      
+      if (!context) return false;
+
+      context.clearRect(0, 0, this.width, this.height);
+
+      for (let i = 0; i < 3; i++) {
+        const offset = i / 3;
+        const progress = (t + offset) % 1;
+        const rippleRadius = radius + (size / 2 - radius) * progress;
+        const opacity = 1 - progress;
+
+        context.beginPath();
+        context.arc(this.width / 2, this.height / 2, rippleRadius, 0, Math.PI * 2);
+        context.fillStyle = `rgba(255, 100, 100, ${opacity * 0.5})`;
+        context.fill();
+      }
+
+      context.beginPath();
+      context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2);
+      context.fillStyle = 'rgba(255, 0, 0, 1)';
+      context.strokeStyle = 'white';
+      context.lineWidth = 3;
+      context.fill();
+      context.stroke();
+
+      this.data = context.getImageData(0, 0, this.width, this.height).data as any;
+
+      map.triggerRepaint();
+      return true;
+    }
+  };
+  
+  return dot;
+};
+
 const graticuleData = generateGraticule();
 
 const MAP_STYLE: maplibregl.StyleSpecification = {
@@ -32,11 +85,6 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
       tileSize: 256,
       maxzoom: 18
     },
-    'carto-labels': {
-      type: 'raster',
-      tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
-    },
     'local-graticule': {
       type: 'geojson',
       data: graticuleData as any
@@ -46,7 +94,7 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
     {
       id: 'background-fill',
       type: 'background',
-      paint: { 'background-color': '#242424' }
+      paint: { 'background-color': '#877c7cff' }
     },
     {
       id: 'graticule-line-layer',
@@ -63,11 +111,6 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
       type: 'raster',
       source: 'world-satellite',
       paint: { 'raster-fade-duration': 800 }
-    },
-    {
-      id: 'labels-layer',
-      type: 'raster',
-      source: 'carto-labels'
     }
   ]
 }
@@ -80,7 +123,22 @@ export default function Map({ newsData }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
 
-  console.log('Map received newsData:', newsData);
+  const getGeoJSON = (data: NewsItem[]): GeoJSON.FeatureCollection => ({
+    type: 'FeatureCollection',
+    features: data.map(item => ({
+      type: 'Feature',
+      geometry: { 
+        type: 'Point', 
+        coordinates: [item.longitude, item.latitude]
+      },
+      properties: { 
+        title: item.rich_text,
+        time: item.create_time,
+        address: item.address,
+        id: item.id
+      }
+    }))
+  });
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -103,10 +161,62 @@ export default function Map({ newsData }: MapProps) {
       if (!mapRef.current) return;
       const map = mapRef.current;
 
+      map.addImage('pulsing-dot', createPulsingDot(map) as any, { pixelRatio: 2 });
+
+   
+      map.addSource('news-points', {
+        type: 'geojson',
+        data: getGeoJSON(newsData)
+      });
+
+    
+      map.addLayer({
+        id: 'news-points-layer',
+        type: 'symbol',
+        source: 'news-points',
+        layout: {
+          'icon-image': 'pulsing-dot',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true
+        }
+      });
+
       map.setSky({
         'sky-color': '#050505',
         'horizon-color': '#242424',
         'sky-horizon-blend': 0.5,
+      });
+
+      map.on('click', 'news-points-layer', (e) => {
+        if (!e.features?.[0]) return;
+        
+        const feature = e.features[0];
+        const coords = (feature.geometry as any).coordinates.slice();
+        const { title, time, address } = feature.properties as any;
+  
+ 
+        while (Math.abs(e.lngLat.lng - coords[0]) > 180) {
+          coords[0] += e.lngLat.lng > coords[0] ? 360 : -360;
+        }
+
+        new maplibregl.Popup({
+          className: 'custom-news-popup',
+          closeButton: false,
+          maxWidth: '300px'
+        })
+          .setLngLat(coords)
+          .setHTML(`
+            <div class="popup-content-wrapper">
+              <div class="popup-time">
+                  <span class="icon">🕒</span> <span>${time}</span>
+              </div>
+              <div class="popup-title">${title}</div>
+              <div class="popup-address">
+                  <span class="icon">📍</span> <span>${address}</span>
+              </div>
+          </div>
+        `)
+          .addTo(map);
       });
     });
 
@@ -117,5 +227,22 @@ export default function Map({ newsData }: MapProps) {
     }
   }, [])
 
-  return <div ref={containerRef} className="fullscreen-map" />
+  useEffect(() => {
+    if (mapRef.current) {
+      const source = mapRef.current.getSource('news-points') as maplibregl.GeoJSONSource;
+      if (source) {
+        source.setData(getGeoJSON(newsData));
+      }
+    }
+  }, [newsData]);
+
+  return (
+    <>
+      <div 
+        ref={containerRef} 
+        className="fullscreen-map" 
+        style={{ width: '100%', height: '100vh'}} 
+      />
+    </>
+  );
 }

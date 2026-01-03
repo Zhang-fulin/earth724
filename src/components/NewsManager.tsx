@@ -16,12 +16,12 @@ export default function NewsManager() {
 
   useEffect(() => {
     const fetchInitialNews = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('earth724')
         .select('*')
         .order('create_time', { ascending: false })
-        .limit(60)
- 
+        .limit(1)
+      console.log('Initial news data fetched:', data, error);
       if (data) setNews(data)
     }
 
@@ -44,7 +44,11 @@ export default function NewsManager() {
           })
         }
       )
-      .subscribe()
+      .subscribe(
+        (status) => {
+          console.log('实时连接状态:', status);
+        }
+      )
 
     return () => {
       supabase.removeChannel(channel)
