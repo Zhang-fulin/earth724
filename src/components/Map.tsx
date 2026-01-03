@@ -68,10 +68,10 @@ export default function Map({ newsData }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
 
+  console.log('Map received newsData:', newsData);
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
-
-    // console.log(newsData)
 
     mapRef.current = new maplibregl.Map({
       container: containerRef.current,
