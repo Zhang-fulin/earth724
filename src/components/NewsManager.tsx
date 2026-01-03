@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Map from './Map'
 
+const messagecounter = 30;
+
 export interface NewsItem {
   id: string | number;
   rich_text: string;
@@ -20,7 +22,7 @@ export default function NewsManager() {
         .from('earth724')
         .select('*')
         .order('create_time', { ascending: false })
-        .limit(1)
+        .limit(messagecounter);
       console.log('Initial news data fetched:', data, error);
       if (data) setNews(data)
     }
@@ -40,7 +42,7 @@ export default function NewsManager() {
 
             console.log('New news item received:', updatedNews);
 
-            return updatedNews.slice(0, 60);
+            return updatedNews.slice(0, messagecounter);
           })
         }
       )
