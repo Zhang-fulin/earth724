@@ -131,7 +131,7 @@ export default function Map({ newsData }: MapProps) {
       type: 'Feature',
       geometry: {
         type: 'Point', 
-        coordinates: [item.longitude + (Math.random() - 0.5) * offset, item.latitude + (Math.random() - 0.5) * offset]
+        coordinates: [item.longitude + 2 * (Math.random() - 0.5) * offset, item.latitude + 2 * (Math.random() - 0.5) * offset]
       },
       properties: { 
         title: item.rich_text,
