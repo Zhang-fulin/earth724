@@ -20,6 +20,8 @@ const generateGraticule = () => {
   return { type: 'FeatureCollection', features };
 };
 
+const graticuleData = generateGraticule();
+
 const MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   projection: { type: 'globe' },
@@ -34,23 +36,33 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
       type: 'raster',
       tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
+    },
+    'local-graticule': {
+      type: 'geojson',
+      data: graticuleData as any
     }
   },
   layers: [
     {
       id: 'background-fill',
       type: 'background',
+      paint: { 'background-color': '#242424' }
+    },
+    {
+      id: 'graticule-line-layer',
+      type: 'line',
+      source: 'local-graticule',
       paint: {
-        'background-color': '#242424', 
+        'line-color': '#7baaf0',
+        'line-width': 0.7,
+        'line-opacity': 0.5 
       }
     },
     {
       id: 'satellite-layer',
       type: 'raster',
       source: 'world-satellite',
-      paint: { 
-        'raster-fade-duration': 800,
-      }
+      paint: { 'raster-fade-duration': 800 }
     },
     {
       id: 'labels-layer',
@@ -96,22 +108,6 @@ export default function Map({ newsData }: MapProps) {
         'horizon-color': '#242424',
         'sky-horizon-blend': 0.5,
       });
-
-      map.addSource('local-graticule', {
-        type: 'geojson',
-        data: generateGraticule() as any
-      });
-
-      map.addLayer({
-        id: 'graticule-line-layer',
-        type: 'line',
-        source: 'local-graticule',
-        paint: {
-          'line-color': '#7baaf0ff',
-          'line-width': 0.7,
-          'line-opacity': 0.5 
-        }
-      }, 'satellite-layer');
     });
 
     return () => {
