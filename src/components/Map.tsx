@@ -4,6 +4,9 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { type NewsItem } from './NewsManager'
 import './MapPopup.css'
 
+const zoomLevelBig = 8;
+const zoomLevelSmall = 15;
+
 const generateGraticule = () => {
   const features = [];
   for (let lng = -180; lng <= 180; lng += 15) {
@@ -36,7 +39,7 @@ const createPulsingDot = (map: MapLibreMap, size: number = 100) => {
     render() {
       const duration = 2000;
       const t = (performance.now() % duration) / duration;
-      const radius = 10;
+      const radius = 8;
       const context = (this as any).context as CanvasRenderingContext2D;
       
       if (!context) return false;
@@ -122,8 +125,7 @@ interface MapProps {
 export default function Map({ newsData }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
-
-  const offset = 0.001;
+  const activePopupRef = useRef<maplibregl.Popup | null>(null);
 
   const getGeoJSON = (data: NewsItem[]): GeoJSON.FeatureCollection => ({
     type: 'FeatureCollection',
@@ -131,12 +133,14 @@ export default function Map({ newsData }: MapProps) {
       type: 'Feature',
       geometry: {
         type: 'Point', 
-        coordinates: [item.longitude + 2 * (Math.random() - 0.5) * offset, item.latitude + 2 * (Math.random() - 0.5) * offset]
+        coordinates: [item.longitude, item.latitude]
       },
       properties: { 
         title: item.rich_text,
         time: item.create_time,
         address: item.address,
+        lng: item.longitude,
+        lat: item.latitude,
         id: item.id
       }
     }))
@@ -154,6 +158,7 @@ export default function Map({ newsData }: MapProps) {
       touchPitch: false,
       pitchWithRotate: false,
       maxTileCacheSize: 1000,
+      doubleClickZoom: false,
     })
 
     const preventDefault = (e: MouseEvent) => e.preventDefault()
@@ -190,23 +195,24 @@ export default function Map({ newsData }: MapProps) {
       });
 
       map.on('click', 'news-points-layer', (e) => {
+        if (activePopupRef.current) activePopupRef.current.remove();
         if (!e.features?.[0]) return;
         
         const feature = e.features[0];
-        const coords = (feature.geometry as any).coordinates.slice();
-        const { title, time, address } = feature.properties as any;
-  
- 
-        while (Math.abs(e.lngLat.lng - coords[0]) > 180) {
-          coords[0] += e.lngLat.lng > coords[0] ? 360 : -360;
+        const { lng, lat, title, time, address } = feature.properties;
+
+        const exactCoords = [lng, lat]; 
+
+        while (Math.abs(e.lngLat.lng - exactCoords[0]) > 180) {
+          exactCoords[0] += e.lngLat.lng > exactCoords[0] ? 360 : -360;
         }
 
-        new maplibregl.Popup({
+        const newPopup = new maplibregl.Popup({
           className: 'custom-news-popup',
           closeButton: false,
           maxWidth: '300px'
         })
-          .setLngLat(coords)
+          .setLngLat(exactCoords as [number, number])
           .setHTML(`
             <div class="popup-content-wrapper">
               <div class="popup-time">
@@ -217,13 +223,22 @@ export default function Map({ newsData }: MapProps) {
                   <span class="icon">📍</span> <span>${address}</span>
               </div>
           </div>
-        `)
-          .addTo(map);
+        `).addTo(map);
+
+        activePopupRef.current = newPopup;
+
+        map.flyTo({
+          center: exactCoords as [number, number],
+          zoom: zoomLevelSmall,
+          duration: 2000,
+          essential: true
+        });
       });
     });
 
     return () => {
       containerRef.current?.removeEventListener('contextmenu', preventDefault)
+      if (activePopupRef.current) activePopupRef.current.remove();
       mapRef.current?.remove()
       mapRef.current = null
     }
@@ -235,6 +250,30 @@ export default function Map({ newsData }: MapProps) {
       if (source) {
         source.setData(getGeoJSON(newsData));
       }
+
+      const map = mapRef.current;
+      map.on('click', (e) => {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ['news-points-layer']
+        });
+        if (features.length === 0 && newsData.length > 0) {
+          const randomIndex = Math.floor(Math.random() * newsData.length);
+          const randomNews = newsData[randomIndex];
+          const targetCoords: [number, number] = [randomNews.longitude, randomNews.latitude];
+
+          if (activePopupRef.current) {
+            activePopupRef.current.remove();
+            activePopupRef.current = null;
+          }
+
+          map.flyTo({
+            center: targetCoords,
+            zoom: zoomLevelBig,
+            duration: 2000,
+            essential: true
+          });
+        }
+      });
     }
   }, [newsData]);
 
