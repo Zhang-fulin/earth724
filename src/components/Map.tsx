@@ -4,8 +4,9 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { type NewsItem } from './NewsManager'
 import './MapPopup.css'
 
-const zoomLevelBig = 8;
-const zoomLevelSmall = 15;
+const zoomLevelBig = 0.5;
+const zoomLevelSmall = 13;
+const flytimeDuration = 5000;
 
 const generateGraticule = () => {
   const features = [];
@@ -152,7 +153,7 @@ export default function Map({ newsData }: MapProps) {
     mapRef.current = new maplibregl.Map({
       container: containerRef.current,
       style: MAP_STYLE,
-      zoom: 1, 
+      zoom: zoomLevelBig, 
       attributionControl: false,
       dragRotate: false,
       touchPitch: false,
@@ -230,7 +231,7 @@ export default function Map({ newsData }: MapProps) {
         map.flyTo({
           center: exactCoords as [number, number],
           zoom: zoomLevelSmall,
-          duration: 2000,
+          duration: flytimeDuration,
           essential: true
         });
       });
@@ -269,7 +270,7 @@ export default function Map({ newsData }: MapProps) {
           map.flyTo({
             center: targetCoords,
             zoom: zoomLevelBig,
-            duration: 2000,
+            duration: flytimeDuration,
             essential: true
           });
         }
