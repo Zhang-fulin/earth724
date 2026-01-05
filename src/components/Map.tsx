@@ -4,9 +4,9 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { type NewsItem } from './NewsManager'
 import './MapPopup.css'
 
-const zoomLevelBig = 0.5;
-const zoomLevelSmall = 13;
-const flytimeDuration = 5000;
+const zoomLevelBig = 1;
+const zoomLevelSmall = 12;
+const flytimeDuration = 2500;
 
 const generateGraticule = () => {
   const features = [];
@@ -89,6 +89,11 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
       tileSize: 256,
       maxzoom: 18
     },
+    'carto-labels': {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+    },
     'local-graticule': {
       type: 'geojson',
       data: graticuleData as any
@@ -115,6 +120,11 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
       type: 'raster',
       source: 'world-satellite',
       paint: { 'raster-fade-duration': 800 }
+    },
+    {
+      id: 'labels-layer',
+      type: 'raster',
+      source: 'carto-labels'
     }
   ]
 }
