@@ -1,39 +1,24 @@
 <div align="center">
 
-# 🌍 Earth724
-**Global News Real-time 3D Visualization**
-**全球新闻实时 3D 可视化平台**
+<p align="center">
+  <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f30d/512.gif" width="80" height="80" alt="Earth724 Logo">
+</p>
 
-[🛰️ Visit Website / 立即访问](https://earth724.online/)
+# Earth724
+**One Globe. Infinite News.**
 
-</div>
-
----
-
-### 🚀 Overview / 简介
-
-> **English:** > Earth724 projects live news streams onto a digital 3D globe, synchronizing global events with geographic coordinates to visualize the world's pulse in real-time.  
-> 
-> **中文：** > Earth724 将实时新闻流投射在 3D 数字地球上，实现全球事件与地理坐标的同步映射，直观呈现世界的实时脉动。
-
----
-
-### ✨ Features / 特点
-
-#### 🟢 **Real-time Updates | 实时更新**
-*Instant marker pop-ups via WebSockets without refreshing.* 基于 WebSocket 技术实现点位即时弹出，无需刷新页面。
-
-#### 📈 **Latest Dynamics | 动态追踪**
-*Always tracks and displays the 60 most recent global events.* 始终展示全球范围内最新的 60 条事件足迹。
-
-#### 🕹️ **3D Interaction | 3D 交互**
-*Immersive globe experience with rotation, zooming, and exploration.* 沉浸式球体操作，支持全球视角的自由旋转、缩放与探索。
-
----
+[![Website](https://img.shields.io/badge/Visit-Website-brightgreen.svg?style=flat-square)](https://earth724.online/) [![Status](https://img.shields.io/badge/Status-Live-blue.svg?style=flat-square)](https://earth724.online/) [![Engine](https://img.shields.io/badge/Engine-MapLibre_GL-lightgrey.svg?style=flat-square)](https://maplibre.org/) [![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://www.cloudflare.com/) [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/) [![Aliyun](https://img.shields.io/badge/Aliyun-ff6a00?style=flat-square&logo=alibabacloud&logoColor=white)](https://www.aliyun.com/) [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/)
 
 
-<div align="center">
+### **LOCATION · TIME · EVENT = NEWS**
+### **地点 · 时间 · 事件 = 新闻**
 
-**✨ Monitoring the world in real-time ✨** **✨ 实时监控全球，掌握地理脉搏 ✨**
+
+# [**👉 🛰️ 👈**](https://earth724.online/)  
+
+
+
+<sub>**Star this project if you like this vision! ⭐**</sub>  
+<sub>如果你喜欢这个实时可视化工具，请给个 Star 鼓励一下！</sub>
 
 </div>
