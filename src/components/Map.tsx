@@ -25,7 +25,7 @@ const generateGraticule = () => {
   return { type: 'FeatureCollection', features };
 };
 
-const createPulsingDot = (map: MapLibreMap, size: number = 100) => {
+const createPulsingDot = (map: MapLibreMap, size: number = 48) => {
   const dot: maplibregl.StyleImageInterface = {
     width: size,
     height: size,
@@ -137,6 +137,7 @@ export default function Map({ newsData }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const activePopupRef = useRef<maplibregl.Popup | null>(null);
+  const newsDataRef = useRef(newsData);
 
   const getGeoJSON = (data: NewsItem[]): GeoJSON.FeatureCollection => ({
     type: 'FeatureCollection',
@@ -205,6 +206,30 @@ export default function Map({ newsData }: MapProps) {
         'sky-horizon-blend': 0.5,
       });
 
+      map.on('click', (e) => {
+        const currentData = newsDataRef.current;
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ['news-points-layer']
+        });
+        if (features.length === 0 && currentData.length > 0) {
+          const randomIndex = Math.floor(Math.random() * currentData.length);
+          const randomNews = currentData[randomIndex];
+          const targetCoords: [number, number] = [randomNews.longitude, randomNews.latitude];
+
+          if (activePopupRef.current) {
+            activePopupRef.current.remove();
+            activePopupRef.current = null;
+          }
+
+          map.flyTo({
+            center: targetCoords,
+            zoom: zoomLevelBig,
+            duration: flytimeDuration,
+            essential: true
+          });
+        }
+      });
+
       map.on('click', 'news-points-layer', (e) => {
         if (activePopupRef.current) activePopupRef.current.remove();
         if (!e.features?.[0]) return;
@@ -249,42 +274,19 @@ export default function Map({ newsData }: MapProps) {
 
     return () => {
       containerRef.current?.removeEventListener('contextmenu', preventDefault)
-      if (activePopupRef.current) activePopupRef.current.remove();
+      activePopupRef.current?.remove();
       mapRef.current?.remove()
       mapRef.current = null
     }
   }, [])
 
   useEffect(() => {
+    newsDataRef.current = newsData;
     if (mapRef.current) {
       const source = mapRef.current.getSource('news-points') as maplibregl.GeoJSONSource;
       if (source) {
         source.setData(getGeoJSON(newsData));
       }
-
-      const map = mapRef.current;
-      map.on('click', (e) => {
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: ['news-points-layer']
-        });
-        if (features.length === 0 && newsData.length > 0) {
-          const randomIndex = Math.floor(Math.random() * newsData.length);
-          const randomNews = newsData[randomIndex];
-          const targetCoords: [number, number] = [randomNews.longitude, randomNews.latitude];
-
-          if (activePopupRef.current) {
-            activePopupRef.current.remove();
-            activePopupRef.current = null;
-          }
-
-          map.flyTo({
-            center: targetCoords,
-            zoom: zoomLevelBig,
-            duration: flytimeDuration,
-            essential: true
-          });
-        }
-      });
     }
   }, [newsData]);
 

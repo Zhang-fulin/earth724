@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Map from './Map'
 
-const messagecounter = 20;
+const messagecounter = 100;
 
 export interface NewsItem {
   id: string | number;
