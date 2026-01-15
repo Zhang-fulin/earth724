@@ -25,7 +25,7 @@ const generateGraticule = () => {
   return { type: 'FeatureCollection', features };
 };
 
-const createPulsingDot = (map: MapLibreMap, size: number = 48) => {
+const createPulsingDot = (map: MapLibreMap, size: number = 100) => {
   const dot: maplibregl.StyleImageInterface = {
     width: size,
     height: size,
