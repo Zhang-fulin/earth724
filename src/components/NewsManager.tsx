@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import Map from './Map'
 
-const messagecounter = 100;
+const messagecounter = 50;
 
 export interface NewsItem {
   id: string | number;
@@ -15,6 +15,7 @@ export interface NewsItem {
 
 export default function NewsManager() {
   const [news, setNews] = useState<NewsItem[]>([])
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     const fetchInitialNews = async () => {
@@ -26,6 +27,8 @@ export default function NewsManager() {
       console.log('Initial news data fetched:', data, error);
       if (data) setNews(data)
     }
+
+    fetchInitialNews();
 
     const channel = supabase
       .channel('news_realtime')
@@ -51,8 +54,11 @@ export default function NewsManager() {
         (status) => {
           console.log('[Realtime] Channel subscribed:', status);
           if (status === 'SUBSCRIBED') {
-            console.log('[Realtime] Channel subscribed: Fetching initial news...');
-            fetchInitialNews();
+            if (!isFirstLoad.current) {
+              console.log('[Realtime] Channel subscribed: Fetching initial news...');
+              fetchInitialNews();
+            }
+            isFirstLoad.current = false;
           }
         }
       )
