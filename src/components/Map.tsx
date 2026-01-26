@@ -134,8 +134,8 @@ interface MapProps {
 }
 
 export default function Map({ newsData }: MapProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const mapRef = useRef<MapLibreMap | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
   const activePopupRef = useRef<maplibregl.Popup | null>(null);
   const newsDataRef = useRef(newsData);
 
@@ -159,7 +159,7 @@ export default function Map({ newsData }: MapProps) {
   });
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
+    if (!containerRef.current || mapRef.current) return;
 
     mapRef.current = new maplibregl.Map({
       container: containerRef.current,
@@ -173,8 +173,8 @@ export default function Map({ newsData }: MapProps) {
       doubleClickZoom: false,
     })
 
-    const preventDefault = (e: MouseEvent) => e.preventDefault()
-    containerRef.current.addEventListener('contextmenu', preventDefault)
+    const preventDefault = (e: MouseEvent) => e.preventDefault();
+    containerRef.current.addEventListener('contextmenu', preventDefault);
 
     mapRef.current.on('style.load', () => {
       if (!mapRef.current) return;
