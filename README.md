@@ -1,9 +1,5 @@
 <div align="center">
 
-<p align="center">
-  <img src="https://github.com/Zhang-fulin/earth724-a/blob/main/assets/adaptive-icon.png" width="200" height="200" alt="Earth724 Logo">
-</p>
-
 # EARTH724
 **One Globe. Infinite News.**
 
