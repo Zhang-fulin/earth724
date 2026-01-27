@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-  <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f30d/512.gif" width="80" height="80" alt="Earth724 Logo">
+  <img src="https://github.com/Zhang-fulin/earth724-a/blob/main/assets/adaptive-icon.png" width="80" height="80" alt="Earth724 Logo">
 </p>
 
 # Earth724
