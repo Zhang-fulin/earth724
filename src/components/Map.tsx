@@ -1,4 +1,4 @@
-import { useEffect, useRef} from 'react'
+import { useEffect, useRef, useState } from 'react'
 import maplibregl, { Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { type NewsItem } from './NewsManager'
@@ -25,7 +25,7 @@ const generateGraticule = () => {
   return { type: 'FeatureCollection', features };
 };
 
-const createPulsingDot = (map: MapLibreMap, size: number = 100) => {
+const createPulsingDot = (map: MapLibreMap, size: number = 100, color: [number, number, number] = [255, 0, 0]) => {
   const dot: maplibregl.StyleImageInterface = {
     width: size,
     height: size,
@@ -55,13 +55,13 @@ const createPulsingDot = (map: MapLibreMap, size: number = 100) => {
 
         context.beginPath();
         context.arc(this.width / 2, this.height / 2, rippleRadius, 0, Math.PI * 2);
-        context.fillStyle = `rgba(255, 100, 100, ${opacity * 0.5})`;
+        context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${opacity * 0.5})`;
         context.fill();
       }
 
       context.beginPath();
       context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2);
-      context.fillStyle = 'rgba(255, 0, 0, 1)';
+      context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 1)`;
       context.strokeStyle = 'white';
       context.lineWidth = 3;
       context.fill();
@@ -129,31 +129,40 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
   ]
 }
 
+const SIDEBAR_WIDTH = 320;
+
 interface MapProps {
   newsData: NewsItem[]
+  limit: number
+  onLimitChange: (limit: number) => void
 }
 
-export default function Map({ newsData }: MapProps) {
+export default function Map({ newsData, limit, onLimitChange }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const activePopupRef = useRef<maplibregl.Popup | null>(null);
   const newsDataRef = useRef(newsData);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeNewsId, setActiveNewsId] = useState<string | number | null>(null);
+  const activeNewsIdRef = useRef<string | number | null>(null);
+  const itemRefs = useRef<Record<string | number, HTMLDivElement | null>>({});
 
-  const getGeoJSON = (data: NewsItem[]): GeoJSON.FeatureCollection => ({
+  const getGeoJSON = (data: NewsItem[], selectedId: string | number | null = null): GeoJSON.FeatureCollection => ({
     type: 'FeatureCollection',
     features: data.map(item => ({
       type: 'Feature',
       geometry: {
-        type: 'Point', 
+        type: 'Point',
         coordinates: [item.longitude, item.latitude]
       },
-      properties: { 
+      properties: {
         title: item.rich_text,
         time: item.create_time,
         address: item.address,
         lng: item.longitude,
         lat: item.latitude,
-        id: item.id
+        id: item.id,
+        selected: item.id === selectedId ? 1 : 0
       }
     }))
   });
@@ -180,21 +189,20 @@ export default function Map({ newsData }: MapProps) {
       if (!mapRef.current) return;
       const map = mapRef.current;
 
-      map.addImage('pulsing-dot', createPulsingDot(map) as any, { pixelRatio: 2 });
+      map.addImage('pulsing-dot', createPulsingDot(map, 100, [255, 0, 0]) as any, { pixelRatio: 2 });
+      map.addImage('pulsing-dot-blue', createPulsingDot(map, 100, [0, 120, 255]) as any, { pixelRatio: 2 });
 
-   
       map.addSource('news-points', {
         type: 'geojson',
         data: getGeoJSON(newsData)
       });
 
-    
       map.addLayer({
         id: 'news-points-layer',
         type: 'symbol',
         source: 'news-points',
         layout: {
-          'icon-image': 'pulsing-dot',
+          'icon-image': ['case', ['==', ['get', 'selected'], 1], 'pulsing-dot-blue', 'pulsing-dot'],
           'icon-allow-overlap': true,
           'icon-ignore-placement': true
         }
@@ -285,18 +293,104 @@ export default function Map({ newsData }: MapProps) {
     if (mapRef.current) {
       const source = mapRef.current.getSource('news-points') as maplibregl.GeoJSONSource;
       if (source) {
-        source.setData(getGeoJSON(newsData));
+        source.setData(getGeoJSON(newsData, activeNewsIdRef.current));
       }
     }
   }, [newsData]);
 
+  const toggleSidebar = () => {
+    const next = !sidebarOpen;
+    setSidebarOpen(next);
+    if (mapRef.current) {
+      const isMobile = window.innerWidth <= 600;
+      const padding = isMobile
+        ? { bottom: next ? window.innerHeight * 0.55 : 0 }
+        : { right: next ? SIDEBAR_WIDTH : 0 };
+
+      if (!next && activeNewsIdRef.current) {
+        // closing — reset selection and fly back to globe view
+        activeNewsIdRef.current = null;
+        setActiveNewsId(null);
+        const source = mapRef.current.getSource('news-points') as maplibregl.GeoJSONSource;
+        if (source) source.setData(getGeoJSON(newsDataRef.current, null));
+        mapRef.current.flyTo({
+          zoom: zoomLevelBig,
+          duration: flytimeDuration,
+          essential: true,
+          padding
+        });
+      } else {
+        mapRef.current.easeTo({ padding, duration: 400 });
+      }
+    }
+  };
+
+  const flyToNews = (item: NewsItem) => {
+    setActiveNewsId(item.id);
+    activeNewsIdRef.current = item.id;
+    if (activePopupRef.current) {
+      activePopupRef.current.remove();
+      activePopupRef.current = null;
+    }
+    if (mapRef.current) {
+      const source = mapRef.current.getSource('news-points') as maplibregl.GeoJSONSource;
+      if (source) source.setData(getGeoJSON(newsDataRef.current, item.id));
+      mapRef.current.flyTo({
+        center: [item.longitude, item.latitude],
+        zoom: zoomLevelSmall,
+        duration: flytimeDuration,
+        essential: true
+      });
+    }
+  };
+
   return (
-    <>
-      <div 
-        ref={containerRef} 
-        className="fullscreen-map" 
-        style={{ width: '100%', height: '100vh'}} 
+    <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
+      <div
+        ref={containerRef}
+        className="fullscreen-map"
+        style={{ width: '100%', height: '100vh' }}
       />
-    </>
+
+      {/* Toggle button */}
+      <button
+        className={`sidebar-toggle-btn ${sidebarOpen ? 'open' : ''}`}
+        onClick={toggleSidebar}
+        aria-label="Toggle news sidebar"
+      >
+        <span className="toggle-arrow-desktop">{sidebarOpen ? '›' : '‹'}</span>
+        <span className="toggle-arrow-mobile">{sidebarOpen ? '↓' : '↑'}</span>
+      </button>
+
+      {/* Right sidebar */}
+      <div className={`news-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="news-sidebar-header">
+          <span>实时新闻</span>
+          <div className="limit-tabs">
+            {[10, 20, 50].map(n => (
+              <button
+                key={n}
+                className={`limit-tab ${limit === n ? 'active' : ''}`}
+                onClick={() => onLimitChange(n)}
+              >{n}</button>
+            ))}
+          </div>
+        </div>
+        <div className="news-sidebar-list">
+          {[...newsData].sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime()).map(item => (
+            <div
+              key={item.id}
+              ref={el => { itemRefs.current[item.id] = el; }}
+              className={`news-sidebar-item ${activeNewsId === item.id ? 'active' : ''}`}
+              onClick={() => flyToNews(item)}
+            >
+              <div className="news-item-time">{item.create_time}</div>
+              <div className="news-item-title">{item.rich_text}</div>
+              <div className="news-item-address">📍 {item.address}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

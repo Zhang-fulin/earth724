@@ -2,29 +2,29 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import Map from './Map'
 
-const messagecounter = 50;
-
 export interface NewsItem {
   id: string | number;
   rich_text: string;
   create_time: string;
   address: string;
   latitude: number;
-  longitude: number; 
+  longitude: number;
 }
 
 export default function NewsManager() {
   const [news, setNews] = useState<NewsItem[]>([])
+  const [limit, setLimit] = useState(20);
   const isFirstLoad = useRef(true);
+  const limitRef = useRef(limit);
 
   useEffect(() => {
+    limitRef.current = limit;
     const fetchInitialNews = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('earth724')
         .select('*')
         .order('create_time', { ascending: false })
-        .limit(messagecounter);
-      console.log('Initial news data fetched:', data, error);
+        .limit(limit);
       if (data) setNews(data)
     }
 
@@ -38,35 +38,21 @@ export default function NewsManager() {
         (payload) => {
           const newNode = payload.new as NewsItem
           setNews((prev) => {
-
             if (prev.some(item => item.id === newNode.id)) return prev;
-
             if (prev.length === 0) return [newNode];
-
-            const updatedNews = [newNode, ...prev];
-
-            console.log('New news item received:', updatedNews);
-            return updatedNews.slice(0, messagecounter);
+            return [newNode, ...prev].slice(0, limitRef.current);
           })
         }
       )
-      .subscribe(
-        (status) => {
-          console.log('[Realtime] Channel subscribed:', status);
-          if (status === 'SUBSCRIBED') {
-            if (!isFirstLoad.current) {
-              console.log('[Realtime] Channel subscribed: Fetching initial news...');
-              fetchInitialNews();
-            }
-            isFirstLoad.current = false;
-          }
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          if (!isFirstLoad.current) fetchInitialNews();
+          isFirstLoad.current = false;
         }
-      )
+      })
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
+    return () => { supabase.removeChannel(channel) }
+  }, [limit])
 
-  return <Map newsData={news} />
+  return <Map newsData={news} limit={limit} onLimitChange={setLimit} />
 }
