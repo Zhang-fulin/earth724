@@ -304,8 +304,8 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
     if (mapRef.current) {
       const isMobile = window.innerWidth <= 600;
       const padding = isMobile
-        ? { bottom: next ? window.innerHeight * 0.55 : 0 }
-        : { right: next ? SIDEBAR_WIDTH : 0 };
+        ? { bottom: next ? window.innerHeight * 0.55 + 32 : 0 }
+        : { right: next ? SIDEBAR_WIDTH + 32 : 0 };
 
       if (!next && activeNewsIdRef.current) {
         // closing — reset selection and fly back to globe view

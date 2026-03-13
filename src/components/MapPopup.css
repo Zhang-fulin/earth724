@@ -44,7 +44,7 @@
 .sidebar-toggle-btn {
     position: fixed;
     top: 50%;
-    right: 0;
+    right: 16px;
     transform: translateY(-50%);
     z-index: 100;
     width: 28px;
@@ -53,8 +53,7 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255,255,255,0.15);
-    border-right: none;
-    border-radius: 8px 0 0 8px;
+    border-radius: 8px;
     color: #fff;
     font-size: 20px;
     cursor: pointer;
@@ -67,7 +66,7 @@
 }
 
 .sidebar-toggle-btn.open {
-    right: 320px;
+    right: 352px;
 }
 
 .sidebar-toggle-btn:hover {
@@ -77,23 +76,31 @@
 /* ── Right sidebar panel ── */
 .news-sidebar {
     position: fixed;
-    top: 0;
-    right: 0;
+    top: 16px;
+    right: 16px;
+    bottom: 16px;
     width: 320px;
-    height: 100%;
     z-index: 99;
     display: flex;
     flex-direction: column;
     background: rgba(10, 12, 20, 0.88);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-    border-left: 1px solid rgba(255,255,255,0.1);
-    transform: translateX(320px);
-    transition: transform 0.4s ease;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    transform: translateX(360px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.4s ease, opacity 0.4s ease, visibility 0s linear 0.4s;
 }
 
 .news-sidebar.open {
     transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform 0.4s ease, opacity 0.4s ease, visibility 0s linear 0s;
 }
 
 .news-sidebar-header {
@@ -166,13 +173,7 @@
     padding: 12px 18px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     cursor: pointer;
-    transition: background 0.2s;
     opacity: 0.7;
-}
-
-.news-sidebar-item:hover {
-    background: rgba(255,255,255,0.07);
-    opacity: 1;
 }
 
 .news-sidebar-item.active {
@@ -211,40 +212,44 @@
     .toggle-arrow-mobile { display: inline; }
 
     .news-sidebar {
-        width: 100vw;
+        width: calc(100vw - 32px);
         height: 55vh;
         top: auto;
-        bottom: 0;
-        right: 0;
-        border-left: none;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        border-radius: 16px 16px 0 0;
-        transform: translateY(55vh);
-        transition: transform 0.4s ease;
+        bottom: 16px;
+        right: 16px;
+        left: 16px;
+        border-radius: 16px;
+        transform: translateY(calc(55vh + 32px));
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: transform 0.4s ease, opacity 0.4s ease, visibility 0s linear 0.4s;
     }
 
     .news-sidebar.open {
         transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition: transform 0.4s ease, opacity 0.4s ease, visibility 0s linear 0s;
     }
 
     .sidebar-toggle-btn {
         top: auto;
-        bottom: 0;
+        bottom: 16px;
         right: 50%;
         transform: translateX(50%);
         width: 56px;
         height: 28px;
-        border-radius: 8px 8px 0 0;
+        border-radius: 8px;
         border: 1px solid rgba(255,255,255,0.15);
-        border-bottom: none;
         font-size: 18px;
         transition: bottom 0.4s ease, background 0.2s;
-        /* override desktop transform so vertical arrows work */
         writing-mode: horizontal-tb;
     }
 
     .sidebar-toggle-btn.open {
         right: 50%;
-        bottom: 55vh;
+        bottom: calc(55vh + 32px);
     }
 }
