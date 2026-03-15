@@ -22,7 +22,7 @@ void main() {
 `
 
 const FRAG = `
-precision mediump float;
+precision highp float;
 uniform vec2 u_sun;
 uniform mat4 u_matrix_inv;
 uniform vec2 u_viewport;
