@@ -6,6 +6,7 @@ import './MapPopup.css'
 
 const zoomLevelBig = 1;
 const zoomLevelSmall = 12;
+const zoomLevelMedium = 2;
 const flytimeDuration = 2500;
 
 const generateGraticule = () => {
@@ -25,7 +26,32 @@ const generateGraticule = () => {
   return { type: 'FeatureCollection', features };
 };
 
-const createPulsingDot = (map: MapLibreMap, size: number = 100, color: [number, number, number] = [255, 0, 0]) => {
+const createStaticDot = (size: number = 100, color: [number, number, number] = [255, 165, 0]): maplibregl.StyleImageInterface => {
+  return {
+    width: size,
+    height: size,
+    data: new Uint8Array(size * size * 4) as any,
+    onAdd() {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      (this as any).context = canvas.getContext('2d', { willReadFrequently: true });
+      const ctx = (this as any).context as CanvasRenderingContext2D;
+      const radius = 8;
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.5)`;
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
+      this.data = ctx.getImageData(0, 0, size, size).data as any;
+    },
+    render() { return true; }
+  };
+};
+
+const createPulsingDot = (map: MapLibreMap, size: number = 100, color: [number, number, number] = [255, 165, 0], duration: number = 2000) => {
   const dot: maplibregl.StyleImageInterface = {
     width: size,
     height: size,
@@ -38,7 +64,6 @@ const createPulsingDot = (map: MapLibreMap, size: number = 100, color: [number, 
     },
 
     render() {
-      const duration = 2000;
       const t = (performance.now() % duration) / duration;
       const radius = 8;
       const context = (this as any).context as CanvasRenderingContext2D;
@@ -162,7 +187,8 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
         lng: item.longitude,
         lat: item.latitude,
         id: item.id,
-        selected: item.id === selectedId ? 1 : 0
+        selected: item.id === selectedId ? 1 : 0,
+        hasSelection: selectedId !== null ? 1 : 0
       }
     }))
   });
@@ -189,8 +215,9 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
       if (!mapRef.current) return;
       const map = mapRef.current;
 
-      map.addImage('pulsing-dot', createPulsingDot(map, 100, [255, 0, 0]) as any, { pixelRatio: 2 });
-      map.addImage('pulsing-dot-blue', createPulsingDot(map, 100, [0, 120, 255]) as any, { pixelRatio: 2 });
+      map.addImage('pulsing-dot', createPulsingDot(map, 100, [220, 50, 50]) as any, { pixelRatio: 2 });
+      map.addImage('pulsing-dot-blue', createPulsingDot(map, 100, [30, 140, 255], 1200) as any, { pixelRatio: 2 });
+      map.addImage('static-dot', createStaticDot(100, [220, 50, 50]) as any, { pixelRatio: 2 });
 
       map.addSource('news-points', {
         type: 'geojson',
@@ -201,8 +228,21 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
         id: 'news-points-layer',
         type: 'symbol',
         source: 'news-points',
+        filter: ['==', ['get', 'selected'], 0],
         layout: {
-          'icon-image': ['case', ['==', ['get', 'selected'], 1], 'pulsing-dot-blue', 'pulsing-dot'],
+          'icon-image': ['case', ['==', ['get', 'hasSelection'], 1], 'static-dot', 'pulsing-dot'],
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true
+        }
+      });
+
+      map.addLayer({
+        id: 'news-points-selected-layer',
+        type: 'symbol',
+        source: 'news-points',
+        filter: ['==', ['get', 'selected'], 1],
+        layout: {
+          'icon-image': 'pulsing-dot-blue',
           'icon-allow-overlap': true,
           'icon-ignore-placement': true
         }
@@ -238,14 +278,14 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
         }
       });
 
-      map.on('click', 'news-points-layer', (e) => {
+      const handlePointClick = (e: maplibregl.MapLayerMouseEvent) => {
         if (activePopupRef.current) activePopupRef.current.remove();
         if (!e.features?.[0]) return;
-        
+
         const feature = e.features[0];
         const { lng, lat, title, time, address } = feature.properties;
 
-        const exactCoords = [lng, lat]; 
+        const exactCoords = [lng, lat];
 
         while (Math.abs(e.lngLat.lng - exactCoords[0]) > 180) {
           exactCoords[0] += e.lngLat.lng > exactCoords[0] ? 360 : -360;
@@ -277,7 +317,10 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
           duration: flytimeDuration,
           essential: true
         });
-      });
+      };
+
+      map.on('click', 'news-points-layer', handlePointClick);
+      map.on('click', 'news-points-selected-layer', handlePointClick);
     });
 
     return () => {
@@ -313,14 +356,14 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
         setActiveNewsId(null);
         const source = mapRef.current.getSource('news-points') as maplibregl.GeoJSONSource;
         if (source) source.setData(getGeoJSON(newsDataRef.current, null));
-        mapRef.current.flyTo({
+        mapRef.current.easeTo({
           zoom: zoomLevelBig,
           duration: flytimeDuration,
           essential: true,
           padding
         });
       } else {
-        mapRef.current.easeTo({ padding, duration: 400 });
+        mapRef.current.easeTo({ padding, duration: flytimeDuration });
       }
     }
   };
@@ -337,7 +380,7 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
       if (source) source.setData(getGeoJSON(newsDataRef.current, item.id));
       mapRef.current.flyTo({
         center: [item.longitude, item.latitude],
-        zoom: zoomLevelSmall,
+        zoom: zoomLevelMedium,
         duration: flytimeDuration,
         essential: true
       });
