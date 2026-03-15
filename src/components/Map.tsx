@@ -6,6 +6,7 @@ import NewsSidebar from './NewsSidebar'
 import { MAP_STYLE, ZOOM_BIG, ZOOM_SMALL, FLY_DURATION, SIDEBAR_WIDTH } from '../constants/map'
 import { createPulsingDot, createStaticDot } from '../utils/mapDots'
 import { getGeoJSON } from '../utils/geoJSON'
+import { createNightLayer } from '../utils/nightMask'
 import './MapPopup.css'
 
 interface MapProps {
@@ -83,6 +84,9 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
         'horizon-color': '#242424',
         'sky-horizon-blend': 0.5,
       });
+
+      // WebGL 夜晚渐变图层
+      map.addLayer(createNightLayer(map) as any, 'labels-layer');
 
       map.on('click', (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ['news-points-layer'] });
