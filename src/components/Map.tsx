@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { type NewsItem } from './NewsManager'
 import NewsSidebar from './NewsSidebar'
-import { MAP_STYLE, ZOOM_BIG, ZOOM_SMALL, ZOOM_MEDIUM, FLY_DURATION, SIDEBAR_WIDTH } from '../constants/map'
+import { MAP_STYLE, ZOOM_BIG, ZOOM_SMALL, FLY_DURATION, SIDEBAR_WIDTH } from '../constants/map'
 import { createPulsingDot, createStaticDot } from '../utils/mapDots'
 import { getGeoJSON } from '../utils/geoJSON'
 import './MapPopup.css'
@@ -172,7 +172,7 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
     if (!mapRef.current) return;
     const source = mapRef.current.getSource('news-points') as maplibregl.GeoJSONSource;
     if (source) source.setData(getGeoJSON(newsDataRef.current, item.id));
-    mapRef.current.flyTo({ center: [item.longitude, item.latitude], zoom: ZOOM_MEDIUM, duration: FLY_DURATION, essential: true });
+    mapRef.current.flyTo({ center: [item.longitude, item.latitude], zoom: ZOOM_BIG, duration: FLY_DURATION, essential: true });
   };
 
   return (
