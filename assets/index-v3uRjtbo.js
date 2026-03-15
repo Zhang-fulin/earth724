@@ -858,7 +858,7 @@ void main() {
   gl_Position = vec4(a_pos, 0.0, 1.0);
 }
 `,wx=`
-precision mediump float;
+precision highp float;
 uniform vec2 u_sun;
 uniform mat4 u_matrix_inv;
 uniform vec2 u_viewport;
