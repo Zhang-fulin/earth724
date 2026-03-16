@@ -57,7 +57,8 @@ void main() {
   float band = radians(12.0);
   float nightFactor = smoothstep(half_pi - band, half_pi + band, angle);
 
-  gl_FragColor = vec4(0.0, 0.0, 0.0, nightFactor * 0.8);
+  // 确保非零alpha，防止图层被跳过
+  gl_FragColor = vec4(0.0, 0.0, 0.0, max(nightFactor * 0.8, 0.001));
 }
 `
 
@@ -103,6 +104,7 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
       gl.useProgram(prog)
       gl.enable(gl.BLEND)
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+      gl.disable(gl.DEPTH_TEST)
 
       const posLoc = gl.getAttribLocation(prog, 'a_pos')
       gl.bindBuffer(gl.ARRAY_BUFFER, buf)
@@ -117,6 +119,7 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
       gl.drawArrays(gl.TRIANGLES, 0, 6)
       gl.disableVertexAttribArray(posLoc)
       gl.disable(gl.BLEND)
+      gl.enable(gl.DEPTH_TEST)
     }
   }
 }

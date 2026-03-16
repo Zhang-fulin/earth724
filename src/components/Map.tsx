@@ -85,8 +85,8 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
         'sky-horizon-blend': 0.5,
       });
 
-      // WebGL 夜晚渐变图层
-      map.addLayer(createNightLayer(map) as any, 'labels-layer');
+      // WebGL 夜晚渐变图层 - 添加在新闻点之前，确保在卫星图之上但在新闻点之下
+      map.addLayer(createNightLayer(map) as any, 'news-points-layer');
 
       map.on('click', (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ['news-points-layer'] });
