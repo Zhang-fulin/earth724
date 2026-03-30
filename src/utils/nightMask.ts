@@ -95,6 +95,8 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
 
     render(_gl2, args) {
       if (!prog || !buf || !gl) return
+      map.triggerRepaint()
+      if (map.getZoom() > 5) return
       const sun = getSunPosition(new Date())
       const matrix = args.defaultProjectionData.mainMatrix
       if (!matrix) return
