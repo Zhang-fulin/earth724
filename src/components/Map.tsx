@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import maplibregl from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
 import { type NewsItem } from './NewsManager'
 import NewsSidebar from './NewsSidebar'
 import { MAP_STYLE, ZOOM_BIG, ZOOM_SMALL, FLY_DURATION, SIDEBAR_WIDTH } from '../constants/map'
@@ -9,13 +8,13 @@ import { getGeoJSON } from '../utils/geoJSON'
 import { createNightLayer } from '../utils/nightMask'
 import './MapPopup.css'
 
+type NewsType = '全部' | '政治' | '经济' | '文化' | '科技' | '体育' | '社会' | '军事' | '其他';
+
 interface MapProps {
   newsData: NewsItem[]
-  limit: number
-  onLimitChange: (limit: number) => void
 }
 
-export default function Map({ newsData, limit, onLimitChange }: MapProps) {
+export default function Map({ newsData }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const activePopupRef = useRef<maplibregl.Popup | null>(null);
@@ -23,6 +22,7 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
   const activeNewsIdRef = useRef<string | number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeNewsId, setActiveNewsId] = useState<string | number | null>(null);
+  const [activeType, setActiveType] = useState<NewsType>('全部');
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -104,10 +104,28 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
         if (activePopupRef.current) activePopupRef.current.remove();
         if (!e.features?.[0]) return;
 
-        const { lng, lat, title, time, address } = e.features[0].properties;
+        const { lng, lat, title, time, address, type } = e.features[0].properties;
         const coords = [lng, lat];
         while (Math.abs(e.lngLat.lng - coords[0]) > 180) {
           coords[0] += e.lngLat.lng > coords[0] ? 360 : -360;
+        }
+
+        // 格式化时间
+        let formattedTime = time;
+        try {
+          const date = new Date(time);
+          if (!isNaN(date.getTime())) {
+            formattedTime = date.toLocaleString('zh-CN', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
+          }
+        } catch (err) {
+          // 保持原始时间字符串
         }
 
         activePopupRef.current = new maplibregl.Popup({
@@ -118,7 +136,10 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
           .setLngLat(coords as [number, number])
           .setHTML(`
             <div class="popup-content-wrapper">
-              <div class="popup-time"><span class="icon">🕒</span> <span>${time}</span></div>
+              <div class="popup-header">
+                <span class="popup-type">${type || '其他'}</span>
+                <span class="popup-time"><span class="icon">🕒</span> <span>${formattedTime}</span></span>
+              </div>
               <div class="popup-title">${title}</div>
               <div class="popup-address"><span class="icon">📍</span> <span>${address}</span></div>
             </div>
@@ -145,7 +166,7 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
     if (source) source.setData(getGeoJSON(newsData, activeNewsIdRef.current));
   }, [newsData]);
 
-  const toggleSidebar = () => {
+  const toggleSidebar = useCallback(() => {
     const next = !sidebarOpen;
     setSidebarOpen(next);
     if (!mapRef.current) return;
@@ -164,9 +185,9 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
     } else {
       mapRef.current.easeTo({ padding, duration: FLY_DURATION });
     }
-  };
+  }, [sidebarOpen]);
 
-  const handleSelectNews = (item: NewsItem) => {
+  const handleSelectNews = useCallback((item: NewsItem) => {
     setActiveNewsId(item.id);
     activeNewsIdRef.current = item.id;
     if (activePopupRef.current) {
@@ -177,7 +198,7 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
     const source = mapRef.current.getSource('news-points') as maplibregl.GeoJSONSource;
     if (source) source.setData(getGeoJSON(newsDataRef.current, item.id));
     mapRef.current.flyTo({ center: [item.longitude, item.latitude], zoom: ZOOM_BIG, duration: FLY_DURATION, essential: true });
-  };
+  }, []);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
@@ -186,10 +207,10 @@ export default function Map({ newsData, limit, onLimitChange }: MapProps) {
         isOpen={sidebarOpen}
         newsData={newsData}
         activeNewsId={activeNewsId}
-        limit={limit}
+        activeType={activeType}
         onToggle={toggleSidebar}
         onSelectNews={handleSelectNews}
-        onLimitChange={onLimitChange}
+        onTypeChange={setActiveType}
       />
     </div>
   );

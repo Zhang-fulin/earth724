@@ -11,6 +11,7 @@ export const getGeoJSON = (data: NewsItem[], selectedId: string | number | null 
     properties: {
       title: item.rich_text,
       time: item.create_time,
+      type: item.type || '其他',
       address: item.address,
       lng: item.longitude,
       lat: item.latitude,

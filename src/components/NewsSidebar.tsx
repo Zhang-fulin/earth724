@@ -1,27 +1,56 @@
-import { useRef } from 'react'
+import React, { useRef, useMemo } from 'react'
 import { type NewsItem } from './NewsManager'
+
+const NEWS_TYPES = ['全部', '政治', '经济', '文化', '科技', '体育', '社会', '军事', '其他'] as const;
+type NewsType = typeof NEWS_TYPES[number];
+
+function formatTime(time: string): string {
+  try {
+    const date = new Date(time);
+    if (isNaN(date.getTime())) return time;
+
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch {
+    return time;
+  }
+}
 
 interface NewsSidebarProps {
   isOpen: boolean
   newsData: NewsItem[]
   activeNewsId: string | number | null
-  limit: number
+  activeType: NewsType
   onToggle: () => void
   onSelectNews: (item: NewsItem) => void
-  onLimitChange: (limit: number) => void
+  onTypeChange: (type: NewsType) => void
 }
 
-export default function NewsSidebar({
+export default React.memo(function NewsSidebar({
   isOpen,
   newsData,
   activeNewsId,
-  limit,
+  activeType,
   onToggle,
   onSelectNews,
-  onLimitChange,
+  onTypeChange,
 }: NewsSidebarProps) {
   const itemRefs = useRef<Record<string | number, HTMLDivElement | null>>({});
-  const sorted = [...newsData].sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime());
+  const sorted = useMemo(
+    () => [...newsData].sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime()),
+    [newsData]
+  );
+
+  const filteredNews = useMemo(
+    () => activeType === '全部' ? sorted : sorted.filter(item => item.type === activeType),
+    [sorted, activeType]
+  );
 
   return (
     <>
@@ -36,26 +65,28 @@ export default function NewsSidebar({
 
       <div className={`news-sidebar ${isOpen ? 'open' : ''}`}>
         <div className="news-sidebar-header">
-          <span>实时新闻</span>
-          <div className="limit-tabs">
-            {[10, 20, 50].map(n => (
+          <div className="type-tabs">
+            {NEWS_TYPES.map(type => (
               <button
-                key={n}
-                className={`limit-tab ${limit === n ? 'active' : ''}`}
-                onClick={() => onLimitChange(n)}
-              >{n}</button>
+                key={type}
+                className={`type-tab ${activeType === type ? 'active' : ''}`}
+                onClick={() => onTypeChange(type)}
+              >{type}</button>
             ))}
           </div>
         </div>
         <div className="news-sidebar-list">
-          {sorted.map(item => (
+          {filteredNews.map(item => (
             <div
               key={item.id}
               ref={el => { itemRefs.current[item.id] = el; }}
               className={`news-sidebar-item ${activeNewsId === item.id ? 'active' : ''}`}
               onClick={() => onSelectNews(item)}
             >
-              <div className="news-item-time">{item.create_time}</div>
+              <div className="news-item-header">
+                <span className="news-item-type">{item.type || '其他'}</span>
+                <span className="news-item-time">{formatTime(item.create_time)}</span>
+              </div>
               <div className="news-item-title">{item.rich_text}</div>
               <div className="news-item-address">📍 {item.address}</div>
             </div>
@@ -64,4 +95,4 @@ export default function NewsSidebar({
       </div>
     </>
   );
-}
+})

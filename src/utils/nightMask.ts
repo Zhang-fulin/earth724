@@ -66,6 +66,12 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
   let prog: WebGLProgram | null = null
   let buf: WebGLBuffer | null = null
   let gl: WebGL2RenderingContext | WebGLRenderingContext | null = null
+  let vs: WebGLShader | null = null
+  let fs: WebGLShader | null = null
+  let uViewportLoc: WebGLUniformLocation | null = null
+  let uSunLoc: WebGLUniformLocation | null = null
+  let uMatrixInvLoc: WebGLUniformLocation | null = null
+  const invArray = new Float32Array(16)
 
   return {
     id: 'night-overlay',
@@ -74,16 +80,20 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
 
     onAdd(_map, _gl) {
       gl = _gl
-      const vs = _gl.createShader(_gl.VERTEX_SHADER)!
+      vs = _gl.createShader(_gl.VERTEX_SHADER)!
       _gl.shaderSource(vs, VERT)
       _gl.compileShader(vs)
-      const fs = _gl.createShader(_gl.FRAGMENT_SHADER)!
+      fs = _gl.createShader(_gl.FRAGMENT_SHADER)!
       _gl.shaderSource(fs, FRAG)
       _gl.compileShader(fs)
       prog = _gl.createProgram()!
       _gl.attachShader(prog, vs)
       _gl.attachShader(prog, fs)
       _gl.linkProgram(prog)
+
+      uViewportLoc = _gl.getUniformLocation(prog, 'u_viewport')
+      uSunLoc = _gl.getUniformLocation(prog, 'u_sun')
+      uMatrixInvLoc = _gl.getUniformLocation(prog, 'u_matrix_inv')
 
       buf = _gl.createBuffer()
       _gl.bindBuffer(_gl.ARRAY_BUFFER, buf)
@@ -93,6 +103,15 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
       ]), _gl.STATIC_DRAW)
     },
 
+    onRemove() {
+      if (!gl) return
+      if (prog) { gl.deleteProgram(prog); prog = null }
+      if (buf) { gl.deleteBuffer(buf); buf = null }
+      if (vs) { gl.deleteShader(vs); vs = null }
+      if (fs) { gl.deleteShader(fs); fs = null }
+      gl = null
+    },
+
     render(_gl2, args) {
       if (!prog || !buf || !gl) return
       map.triggerRepaint()
@@ -100,8 +119,7 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
       const sun = getSunPosition(new Date())
       const matrix = args.defaultProjectionData.mainMatrix
       if (!matrix) return
-      const inv = invertMat4([...matrix] as number[])
-      if (!inv) return
+      if (!invertMat4Into([...matrix] as number[], invArray)) return
 
       gl.useProgram(prog)
       gl.enable(gl.BLEND)
@@ -114,9 +132,9 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
       gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0)
 
       const canvas = map.getCanvas()
-      gl.uniform2f(gl.getUniformLocation(prog, 'u_viewport'), canvas.width, canvas.height)
-      gl.uniform2f(gl.getUniformLocation(prog, 'u_sun'), sun.lng * Math.PI / 180, sun.lat * Math.PI / 180)
-      gl.uniformMatrix4fv(gl.getUniformLocation(prog, 'u_matrix_inv'), false, inv)
+      gl.uniform2f(uViewportLoc, canvas.width, canvas.height)
+      gl.uniform2f(uSunLoc, sun.lng * Math.PI / 180, sun.lat * Math.PI / 180)
+      gl.uniformMatrix4fv(uMatrixInvLoc, false, invArray)
 
       gl.drawArrays(gl.TRIANGLES, 0, 6)
       gl.disableVertexAttribArray(posLoc)
@@ -126,15 +144,14 @@ export function createNightLayer(map: maplibregl.Map): maplibregl.CustomLayerInt
   }
 }
 
-function invertMat4(m: number[]): number[] | null {
-  const out = new Array(16)
+function invertMat4Into(m: number[], out: Float32Array): boolean {
   const [a00,a01,a02,a03,a10,a11,a12,a13,a20,a21,a22,a23,a30,a31,a32,a33] = m
   const b00=a00*a11-a01*a10, b01=a00*a12-a02*a10, b02=a00*a13-a03*a10
   const b03=a01*a12-a02*a11, b04=a01*a13-a03*a11, b05=a02*a13-a03*a12
   const b06=a20*a31-a21*a30, b07=a20*a32-a22*a30, b08=a20*a33-a23*a30
   const b09=a21*a32-a22*a31, b10=a21*a33-a23*a31, b11=a22*a33-a23*a32
   let det=b00*b11-b01*b10+b02*b09+b03*b08-b04*b07+b05*b06
-  if (!det) return null
+  if (!det) return false
   det = 1.0 / det
   out[0]=(a11*b11-a12*b10+a13*b09)*det; out[1]=(a02*b10-a01*b11-a03*b09)*det
   out[2]=(a31*b05-a32*b04+a33*b03)*det; out[3]=(a22*b04-a21*b05-a23*b03)*det
@@ -144,5 +161,5 @@ function invertMat4(m: number[]): number[] | null {
   out[10]=(a30*b04-a31*b02+a33*b00)*det; out[11]=(a21*b02-a20*b04-a23*b00)*det
   out[12]=(a11*b07-a10*b09-a12*b06)*det; out[13]=(a00*b09-a01*b07+a02*b06)*det
   out[14]=(a31*b01-a30*b03-a32*b00)*det; out[15]=(a20*b03-a21*b01+a22*b00)*det
-  return out
+  return true
 }

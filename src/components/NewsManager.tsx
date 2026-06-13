@@ -9,26 +9,23 @@ export interface NewsItem {
   address: string;
   latitude: number;
   longitude: number;
+  type?: string;
 }
 
 export default function NewsManager() {
   const [news, setNews] = useState<NewsItem[]>([])
-  const [limit, setLimit] = useState(20);
   const isFirstLoad = useRef(true);
-  const limitRef = useRef(limit);
 
   useEffect(() => {
-    limitRef.current = limit;
-    const fetchInitialNews = async () => {
+    const fetchNews = async () => {
       const { data } = await supabase
         .from('earth724')
         .select('*')
         .order('create_time', { ascending: false })
-        .limit(limit);
+        .limit(100);
       if (data) setNews(data)
     }
-
-    fetchInitialNews();
+    fetchNews()
 
     const channel = supabase
       .channel('news_realtime')
@@ -40,19 +37,19 @@ export default function NewsManager() {
           setNews((prev) => {
             if (prev.some(item => item.id === newNode.id)) return prev;
             if (prev.length === 0) return [newNode];
-            return [newNode, ...prev].slice(0, limitRef.current);
+            return [newNode, ...prev].slice(0, 100);
           })
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          if (!isFirstLoad.current) fetchInitialNews();
+          if (!isFirstLoad.current) fetchNews();
           isFirstLoad.current = false;
         }
       })
 
     return () => { supabase.removeChannel(channel) }
-  }, [limit])
+  }, [])
 
-  return <Map newsData={news} limit={limit} onLimitChange={setLimit} />
+  return <Map newsData={news} />
 }

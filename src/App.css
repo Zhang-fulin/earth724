@@ -7,7 +7,7 @@ html, body, #root {
   width: 100vw; height: 100vh;
   /* 宇宙星空背景 */
   background: radial-gradient(circle at center, #1b2735 0%, #000 100%);
-  background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
+  background-image: url('../public/textures/stardust.png');
 }
 
 /* 隐藏右键菜单 */
