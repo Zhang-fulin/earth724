@@ -4,11 +4,11 @@ export const NEWS_TYPES_CONFIG = [
   { name: '全部', color: '#78909c' },
   { name: '政治', color: '#e53935' },
   { name: '经济', color: '#ff9800' },
-  { name: '文化', color: '#9c27b0' },
+  { name: '文化', color: '#ab47bc' },
   { name: '科技', color: '#2196f3' },
   { name: '体育', color: '#4caf50' },
-  { name: '社会', color: '#e91e63' },
-  { name: '军事', color: '#795548' },
+  { name: '社会', color: '#0097a7' },
+  { name: '军事', color: '#5d4037' },
   { name: '其他', color: '#9e9e9e' },
 ] as const;
 
