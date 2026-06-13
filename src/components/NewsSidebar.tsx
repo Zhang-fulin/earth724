@@ -1,25 +1,11 @@
 import React, { useRef, useMemo } from 'react'
 import { type NewsItem } from './NewsManager'
-
-const NEWS_TYPES = ['全部', '政治', '经济', '文化', '科技', '体育', '社会', '军事', '其他'] as const;
-type NewsType = typeof NEWS_TYPES[number];
+import { TYPE_COLORS, NEWS_TYPES, ALL_TYPE, DEFAULT_TYPE, type NewsType } from '../utils/geoJSON'
 
 function formatTime(time: string): string {
-  try {
-    const date = new Date(time);
-    if (isNaN(date.getTime())) return time;
-
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  } catch {
-    return time;
-  }
+  if (!time) return '';
+  // 直接截取前19位: "2025-06-13T08:42:00" -> "2025-06-13 08:42:00"
+  return time.replace('T', ' ').slice(0, 19);
 }
 
 interface NewsSidebarProps {
@@ -48,7 +34,7 @@ export default React.memo(function NewsSidebar({
   );
 
   const filteredNews = useMemo(
-    () => activeType === '全部' ? sorted : sorted.filter(item => item.type === activeType),
+    () => activeType === ALL_TYPE ? sorted : sorted.filter(item => item.type === activeType),
     [sorted, activeType]
   );
 
@@ -70,6 +56,7 @@ export default React.memo(function NewsSidebar({
               <button
                 key={type}
                 className={`type-tab ${activeType === type ? 'active' : ''}`}
+                style={activeType === type ? { background: TYPE_COLORS[type] || TYPE_COLORS[DEFAULT_TYPE], borderColor: TYPE_COLORS[type] || TYPE_COLORS[DEFAULT_TYPE] } : undefined}
                 onClick={() => onTypeChange(type)}
               >{type}</button>
             ))}
@@ -84,7 +71,7 @@ export default React.memo(function NewsSidebar({
               onClick={() => onSelectNews(item)}
             >
               <div className="news-item-header">
-                <span className="news-item-type">{item.type || '其他'}</span>
+                <span className="news-item-type" style={{ background: TYPE_COLORS[item.type || DEFAULT_TYPE] || TYPE_COLORS[DEFAULT_TYPE] }}>{item.type || DEFAULT_TYPE}</span>
                 <span className="news-item-time">{formatTime(item.create_time)}</span>
               </div>
               <div className="news-item-title">{item.rich_text}</div>

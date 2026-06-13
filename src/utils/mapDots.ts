@@ -1,6 +1,6 @@
 import maplibregl, { Map as MapLibreMap } from 'maplibre-gl'
 
-export const createStaticDot = (size: number = 100, color: [number, number, number] = [220, 50, 50]): maplibregl.StyleImageInterface => {
+export const createStaticDot = (size: number, color: [number, number, number]): maplibregl.StyleImageInterface => {
   return {
     width: size,
     height: size,
@@ -25,7 +25,7 @@ export const createStaticDot = (size: number = 100, color: [number, number, numb
   };
 };
 
-export const createPulsingDot = (map: MapLibreMap, size: number = 100, color: [number, number, number] = [220, 50, 50], duration: number = 2000): maplibregl.StyleImageInterface => {
+export const createPulsingDot = (map: MapLibreMap, size: number, color: [number, number, number], duration: number = 2000): maplibregl.StyleImageInterface => {
   return {
     width: size,
     height: size,

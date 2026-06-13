@@ -4,11 +4,9 @@ import { type NewsItem } from './NewsManager'
 import NewsSidebar from './NewsSidebar'
 import { MAP_STYLE, ZOOM_BIG, ZOOM_SMALL, FLY_DURATION, SIDEBAR_WIDTH } from '../constants/map'
 import { createPulsingDot, createStaticDot } from '../utils/mapDots'
-import { getGeoJSON } from '../utils/geoJSON'
+import { getGeoJSON, TYPE_COLORS, NEWS_TYPES, ALL_TYPE, DEFAULT_TYPE, type NewsType } from '../utils/geoJSON'
 import { createNightLayer } from '../utils/nightMask'
 import './MapPopup.css'
-
-type NewsType = '全部' | '政治' | '经济' | '文化' | '科技' | '体育' | '社会' | '军事' | '其他';
 
 interface MapProps {
   newsData: NewsItem[]
@@ -20,9 +18,10 @@ export default function Map({ newsData }: MapProps) {
   const activePopupRef = useRef<maplibregl.Popup | null>(null);
   const newsDataRef = useRef(newsData);
   const activeNewsIdRef = useRef<string | number | null>(null);
+  const activeTypeRef = useRef<NewsType>(ALL_TYPE);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeNewsId, setActiveNewsId] = useState<string | number | null>(null);
-  const [activeType, setActiveType] = useState<NewsType>('全部');
+  const [activeType, setActiveType] = useState<NewsType>(ALL_TYPE);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -46,14 +45,33 @@ export default function Map({ newsData }: MapProps) {
       if (!mapRef.current) return;
       const map = mapRef.current;
 
-      map.addImage('pulsing-dot', createPulsingDot(map, 100, [220, 50, 50]) as any, { pixelRatio: 2 });
-      map.addImage('pulsing-dot-blue', createPulsingDot(map, 100, [30, 140, 255], 1200) as any, { pixelRatio: 2 });
-      map.addImage('static-dot', createStaticDot(100, [220, 50, 50]) as any, { pixelRatio: 2 });
+      // 每种分类对应颜色的脉冲点
+      const hexToRgb = (hex: string): [number, number, number] => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return [r, g, b];
+      };
+
+      const typeNames = NEWS_TYPES.filter(t => t !== ALL_TYPE);
+      typeNames.forEach(type => {
+        const rgb = hexToRgb(TYPE_COLORS[type]);
+        map.addImage(`pulsing-${type}`, createPulsingDot(map, 100, rgb) as any, { pixelRatio: 2 });
+        map.addImage(`static-${type}`, createStaticDot(100, rgb) as any, { pixelRatio: 2 });
+      });
 
       map.addSource('news-points', {
         type: 'geojson',
         data: getGeoJSON(newsDataRef.current)
       });
+
+      // 根据 type 选择对应颜色的点图片
+      const typeImageMap = typeNames.flatMap(type => [
+        ['==', ['get', 'type'], type], `pulsing-${type}`
+      ]);
+      const staticTypeImageMap = typeNames.flatMap(type => [
+        ['==', ['get', 'type'], type], `static-${type}`
+      ]);
 
       map.addLayer({
         id: 'news-points-layer',
@@ -61,7 +79,12 @@ export default function Map({ newsData }: MapProps) {
         source: 'news-points',
         filter: ['==', ['get', 'selected'], 0],
         layout: {
-          'icon-image': ['case', ['==', ['get', 'hasSelection'], 1], 'static-dot', 'pulsing-dot'],
+          'icon-image': [
+            'case',
+            ['==', ['get', 'hasSelection'], 1],
+            ['case', ...staticTypeImageMap, `static-${DEFAULT_TYPE}`],
+            ['case', ...typeImageMap, `pulsing-${DEFAULT_TYPE}`]
+          ] as any,
           'icon-allow-overlap': true,
           'icon-ignore-placement': true
         }
@@ -73,7 +96,7 @@ export default function Map({ newsData }: MapProps) {
         source: 'news-points',
         filter: ['==', ['get', 'selected'], 1],
         layout: {
-          'icon-image': 'pulsing-dot-blue',
+          'icon-image': ['case', ...typeImageMap, `pulsing-${DEFAULT_TYPE}`] as any,
           'icon-allow-overlap': true,
           'icon-ignore-placement': true
         }
@@ -95,8 +118,11 @@ export default function Map({ newsData }: MapProps) {
             activePopupRef.current.remove();
             activePopupRef.current = null;
           }
-          const random = newsDataRef.current[Math.floor(Math.random() * newsDataRef.current.length)];
-          map.flyTo({ center: [random.longitude, random.latitude], zoom: ZOOM_BIG, duration: FLY_DURATION, essential: true });
+          const filtered = activeTypeRef.current === ALL_TYPE ? newsDataRef.current : newsDataRef.current.filter(item => item.type === activeTypeRef.current);
+          if (filtered.length > 0) {
+            const random = filtered[Math.floor(Math.random() * filtered.length)];
+            map.flyTo({ center: [random.longitude, random.latitude], zoom: ZOOM_BIG, duration: FLY_DURATION, essential: true });
+          }
         }
       });
 
@@ -110,23 +136,7 @@ export default function Map({ newsData }: MapProps) {
           coords[0] += e.lngLat.lng > coords[0] ? 360 : -360;
         }
 
-        // 格式化时间
-        let formattedTime = time;
-        try {
-          const date = new Date(time);
-          if (!isNaN(date.getTime())) {
-            formattedTime = date.toLocaleString('zh-CN', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
-            });
-          }
-        } catch (err) {
-          // 保持原始时间字符串
-        }
+        const formattedTime = time ? time.replace('T', ' ').slice(0, 19) : '';
 
         activePopupRef.current = new maplibregl.Popup({
           className: 'custom-news-popup',
@@ -137,7 +147,7 @@ export default function Map({ newsData }: MapProps) {
           .setHTML(`
             <div class="popup-content-wrapper">
               <div class="popup-header">
-                <span class="popup-type">${type || '其他'}</span>
+                <span class="popup-type" style="background:${TYPE_COLORS[type] || TYPE_COLORS[DEFAULT_TYPE]}">${type || DEFAULT_TYPE}</span>
                 <span class="popup-time"><span class="icon">🕒</span> <span>${formattedTime}</span></span>
               </div>
               <div class="popup-title">${title}</div>
@@ -166,6 +176,16 @@ export default function Map({ newsData }: MapProps) {
     if (source) source.setData(getGeoJSON(newsData, activeNewsIdRef.current));
   }, [newsData]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const typeFilter = activeType === ALL_TYPE
+      ? ['all']
+      : ['==', ['get', 'type'], activeType];
+    map.setFilter('news-points-layer', ['all', ['==', ['get', 'selected'], 0], typeFilter] as any);
+    map.setFilter('news-points-selected-layer', ['all', ['==', ['get', 'selected'], 1], typeFilter] as any);
+  }, [activeType]);
+
   const toggleSidebar = useCallback(() => {
     const next = !sidebarOpen;
     setSidebarOpen(next);
@@ -186,6 +206,21 @@ export default function Map({ newsData }: MapProps) {
       mapRef.current.easeTo({ padding, duration: FLY_DURATION });
     }
   }, [sidebarOpen]);
+
+  const handleTypeChange = useCallback((type: NewsType) => {
+    setActiveType(type);
+    activeTypeRef.current = type;
+    if (activePopupRef.current) {
+      activePopupRef.current.remove();
+      activePopupRef.current = null;
+    }
+    if (!mapRef.current) return;
+    const filtered = type === ALL_TYPE ? newsDataRef.current : newsDataRef.current.filter(item => item.type === type);
+    if (filtered.length > 0) {
+      const random = filtered[Math.floor(Math.random() * filtered.length)];
+      mapRef.current.flyTo({ center: [random.longitude, random.latitude], zoom: ZOOM_BIG, duration: FLY_DURATION, essential: true });
+    }
+  }, []);
 
   const handleSelectNews = useCallback((item: NewsItem) => {
     setActiveNewsId(item.id);
@@ -210,7 +245,7 @@ export default function Map({ newsData }: MapProps) {
         activeType={activeType}
         onToggle={toggleSidebar}
         onSelectNews={handleSelectNews}
-        onTypeChange={setActiveType}
+        onTypeChange={handleTypeChange}
       />
     </div>
   );
