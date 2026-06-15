@@ -20,11 +20,13 @@ Single-view SPA that renders geolocated news as animated pulsing dots on an inte
 
 **Stack:** React 19 + TypeScript, Vite 7, MapLibre GL 5, Supabase (PostgreSQL + realtime)
 
-**Component tree:** `main.tsx` → `<App>` → `<NewsManager>` → `<Map>`
+**Component tree:** `main.tsx` → `<App>` → `<Map>` + `<NewsSidebar>`（App uses `useNews` hook for data）
 
-- `NewsManager` — data layer. Owns `news: NewsItem[]` state, fetches initial data from Supabase, and subscribes to `postgres_changes` for real-time inserts (capped at 50 items). Passes `newsData` down as a prop.
+- `useNews` — data hook. Owns `news: NewsItem[]` state, fetches initial data from Supabase, and subscribes to `postgres_changes` for real-time inserts (capped at 100 items). Returns `{ news, displayData, sidebarOpen, mapRef, ... }`.
 - `Map` — rendering layer. Initializes a MapLibre globe once (first `useEffect`), then syncs the GeoJSON source when `newsData` changes (second `useEffect`). Uses `newsDataRef` to avoid stale closures inside map event handlers.
+- `NewsSidebar` — UI panel with type-filtered news list.
 - `lib/supabase.ts` — Supabase client singleton (anon key is intentionally public for client-side use).
+- `types.ts` — shared types (`NewsItem`).
 
 **Globe setup:** ArcGIS satellite tiles + label overlay + lat/lng graticule grid, `projection: { type: 'globe' }`.
 

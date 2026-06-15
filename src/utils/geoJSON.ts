@@ -1,4 +1,4 @@
-import { type NewsItem } from '../components/NewsManager'
+import type { NewsItem } from '../types'
 
 export const NEWS_TYPES_CONFIG = [
   { name: '全部', color: '#78909c' },

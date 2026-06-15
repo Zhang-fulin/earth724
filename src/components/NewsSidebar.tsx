@@ -1,42 +1,52 @@
-import React, { useRef, useMemo } from 'react'
-import { type NewsItem } from './NewsManager'
+import React, { useState, useMemo, useEffect } from 'react'
+import type { NewsItem } from '../types'
 import { TYPE_COLORS, NEWS_TYPES, ALL_TYPE, DEFAULT_TYPE, type NewsType } from '../utils/geoJSON'
 
 function formatTime(time: string): string {
   if (!time) return '';
-  // 直接截取前19位: "2025-06-13T08:42:00" -> "2025-06-13 08:42:00"
   return time.replace('T', ' ').slice(0, 19);
 }
 
 interface NewsSidebarProps {
   isOpen: boolean
   newsData: NewsItem[]
-  activeNewsId: string | number | null
-  activeType: NewsType
+  selectedId: NewsItem['id'] | null
   onToggle: () => void
   onSelectNews: (item: NewsItem) => void
-  onTypeChange: (type: NewsType) => void
+  onDataChange: (filtered: NewsItem[]) => void
 }
 
 export default React.memo(function NewsSidebar({
   isOpen,
   newsData,
-  activeNewsId,
-  activeType,
+  selectedId,
   onToggle,
   onSelectNews,
-  onTypeChange,
+  onDataChange,
 }: NewsSidebarProps) {
-  const itemRefs = useRef<Record<string | number, HTMLDivElement | null>>({});
-  const sorted = useMemo(
-    () => [...newsData].sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime()),
-    [newsData]
-  );
+  const [activeType, setActiveType] = useState<NewsType>(ALL_TYPE);
+
+  // 侧边栏收起时重置为全部
+  useEffect(() => {
+    if (!isOpen) setActiveType(ALL_TYPE);
+  }, [isOpen]);
 
   const filteredNews = useMemo(
-    () => activeType === ALL_TYPE ? sorted : sorted.filter(item => item.type === activeType),
-    [sorted, activeType]
+    () => activeType === ALL_TYPE
+      ? [...newsData].sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime())
+      : newsData.filter(item => item.type === activeType).sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime()),
+    [newsData, activeType]
   );
+
+  // 筛选结果变化 → 通知父组件 → 传给 Map
+  useEffect(() => {
+    onDataChange(filteredNews);
+  }, [filteredNews]);
+
+  // 切换分类或侧边栏收起时自动选中最新一条
+  useEffect(() => {
+    if (filteredNews.length > 0) onSelectNews(filteredNews[0]);
+  }, [activeType, isOpen]);
 
   return (
     <>
@@ -57,7 +67,7 @@ export default React.memo(function NewsSidebar({
                 key={type}
                 className={`type-tab ${activeType === type ? 'active' : ''}`}
                 style={activeType === type ? { background: TYPE_COLORS[type] || TYPE_COLORS[DEFAULT_TYPE], borderColor: TYPE_COLORS[type] || TYPE_COLORS[DEFAULT_TYPE] } : undefined}
-                onClick={() => onTypeChange(type)}
+                onClick={() => setActiveType(type)}
               >{type}</button>
             ))}
           </div>
@@ -66,8 +76,7 @@ export default React.memo(function NewsSidebar({
           {filteredNews.map(item => (
             <div
               key={item.id}
-              ref={el => { itemRefs.current[item.id] = el; }}
-              className={`news-sidebar-item ${activeNewsId === item.id ? 'active' : ''}`}
+              className={`news-sidebar-item${selectedId === item.id ? ' active' : ''}`}
               onClick={() => onSelectNews(item)}
             >
               <div className="news-item-header">
