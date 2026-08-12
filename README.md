@@ -10,7 +10,7 @@
 ### **地点 · 时间 · 事件 = 新闻**
 
 
-[**👉 🛰️ 👈**](https://earth724.online/)  
+[**👉 🛰️ 👈**](https://earth724.zhangfulin.com/)  
 
 
 
